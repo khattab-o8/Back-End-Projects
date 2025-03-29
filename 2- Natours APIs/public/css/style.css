@@ -137,7 +137,7 @@ body {
     to(#eb4d4b)
   );
   background-image: linear-gradient(to right, #ff7730, #eb4d4b);
-  font-size: 3.5rem;
+  font-size: 3.3rem;
 }
 
 .heading-primary,
@@ -552,7 +552,7 @@ body {
 }
 
 .marker {
-  background-image: url('../img/pin.png');
+  background-image: url('/img/pin.png');
   background-size: cover;
   width: 32px;
   height: 40px;

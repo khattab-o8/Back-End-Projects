@@ -1,6 +1,8 @@
 // MODULES:
 const Tour = require('../models/tourModel');
+const User = require('../models/userModel');
 const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
 
 //-------------Here-------------//
 
@@ -22,8 +24,49 @@ exports.getTour = catchAsync(async (req, res, next) => {
     select: '-_id -createdAt'
   });
 
+  if (!tour) {
+    return next(new AppError('There is no tour with that name', 404));
+  }
+
+  res.set(
+    'Content-Security-Policy',
+    "default-src 'self' https://*.mapbox.com; base-uri 'self'; block-all-mixed-content; font-src 'self' https:; frame-ancestors 'self'; img-src 'self' blob: data:; object-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://api.mapbox.com 'self' blob:; style-src 'self' https: 'unsafe-inline'; upgrade-insecure-requests;"
+  );
+
   res.status(200).render('tour', {
-    title: tour.name,
+    title: `${tour.name} Tour`,
     tour
+  });
+});
+
+exports.getLoginForm = (req, res) => {
+  res.status(200).render('login', {
+    title: 'Log into your account'
+  });
+};
+
+exports.getAccount = (req, res) => {
+  res.status(200).render('account', {
+    title: 'Your Account'
+  });
+};
+
+exports.updateUserData = catchAsync(async (req, res, next) => {
+  const UpdatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    {
+      name: req.body.name,
+      email: req.body.email
+    },
+    {
+      new: true,
+      runValidators: true
+    }
+  );
+
+  // Re-render account page.
+  res.status(200).render('account', {
+    title: 'Your Account',
+    user: UpdatedUser
   });
 });

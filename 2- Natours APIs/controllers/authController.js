@@ -76,6 +76,11 @@ exports.login = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
+exports.logout = (req, res) => {
+  res.clearCookie('jwt');
+  res.status(200).json({ status: 'success' });
+};
+
 exports.protect = catchAsync(async (req, res, next) => {
   //-------------Here-------------//
   // 1)- Getting token and check if it exists
@@ -84,6 +89,10 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   if (authorizationKey && authorizationKey.startsWith('Bearer')) {
     token = authorizationKey.split(' ').at(1);
+  }
+
+  if (req.cookies.jwt) {
+    token = req.cookies.jwt;
   }
 
   if (!token) {
@@ -119,9 +128,44 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // GRANT ACCESS TO PROTECTED ROUTE
   req.user = currentUser; // Manipulate req object
+  res.locals.user = currentUser;
 
   next();
 });
+
+// Only for rendered pages, no errors!
+exports.isLoggedIn = async (req, res, next) => {
+  if (req.cookies.jwt) {
+    try {
+      // 1)- Verify token
+      const promisifyingJWTVerify = promisify(jwt.verify); // Creates async fn
+      // Execute async fn
+      const decoded = await promisifyingJWTVerify(
+        req.cookies.jwt,
+        process.env.JWT_SECRET
+      );
+
+      // 2)- Check if user still exists.
+      const currentUser = await User.findById(decoded.id);
+      if (!currentUser) {
+        return next();
+      }
+
+      // 3) Check if user does not change password after the token was issued
+      if (currentUser.isPasswordChangedAfter(decoded.iat)) {
+        return next();
+      }
+
+      // There is a logged in user
+      res.locals.user = currentUser;
+      return next();
+    } catch (err) {
+      return next();
+    }
+  }
+
+  next();
+};
 
 // (restrictTo) Wrapper Fn:
 exports.restrictTo = (...roles) => {
